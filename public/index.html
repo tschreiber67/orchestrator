@@ -1,0 +1,30 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Workflow Orchestrator</title>
+<style>body{font:14px sans-serif;margin:20px;background:#fafafa}select,input{margin-right:12px}
+#sum{margin:10px 0;font-weight:600}.skip{color:#a33;margin-top:8px}svg{background:#fff;border:1px solid #ccc}</style></head><body>
+<h2>Workflow timeline</h2>
+<label>Workflow <select id="wf"></select></label>
+<label>Workers <input id="w" type="number" min="1" max="16" value="2" style="width:50px"></label>
+<button id="go">Run</button>
+<div id="sum"></div><svg id="g" width="900" height="100"></svg><div id="skipped" class="skip"></div>
+<script>
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+function el(n,a,t){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(t)e.textContent=t;return e}
+async function run(){
+ const r=await fetch(`/api/run?workflow=${encodeURIComponent($("wf").value)}&workers=${encodeURIComponent($("w").value)}`);const d=await r.json();
+ if(!r.ok){$("sum").textContent=d.error;return}
+ $("sum").textContent=`makespan ${d.makespan} | critical path ${d.critical_path.length} (${d.critical_path.tasks.join(" > ")}) | utilization ${Math.round(d.utilization*100)}% | ok ${d.counts.success} failed ${d.counts.failed} skipped ${d.counts.skipped}`;
+ const g=$("g");g.innerHTML="";const L=60,W=820,H=36,sc=W/(d.makespan||1);
+ g.setAttribute("height",d.workers*H+40);
+ for(let i=0;i<d.workers;i++)g.appendChild(el("text",{x:8,y:i*H+26},"w"+i));
+ d.timeline.filter(s=>s.end!==null).forEach(s=>{
+  const x=L+s.start*sc,w=(s.end-s.start)*sc,y=s.worker*H+8;
+  g.appendChild(el("rect",{x,y,width:w-1,height:H-8,fill:s.status=="success"?"#4a90d9":"#d94a4a"}));
+  g.appendChild(el("text",{x:x+3,y:y+16,fill:"#fff","font-size":10},s.task));});
+ for(let t=0;t<=d.makespan;t+=Math.max(1,Math.round(d.makespan/10)))g.appendChild(el("text",{x:L+t*sc,y:d.workers*H+25,"font-size":10},t));
+ const sk=d.timeline.filter(s=>s.status=="skipped").map(s=>s.task);
+ $("skipped").textContent=sk.length?"skipped: "+sk.join(", "):"";
+}
+$("go").onclick=run;
+$("wf").onchange=run;
+fetch("/api/workflows").then(r=>r.json()).then(d=>{d.workflows.forEach(n=>$("wf").add(new Option(n,n)));run()});
+</script></body></html>

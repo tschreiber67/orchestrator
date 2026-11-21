@@ -1,0 +1,15 @@
+{
+  "name": "workflow-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DAG workflow runner with dependencies and execution timeline (S1 baseline)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/cli.js serve --port 8102",
+    "run:etl": "node src/cli.js run etl --workers 3",
+    "test": "node --test"
+  }
+}
